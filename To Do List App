@@ -1,0 +1,222 @@
+import os
+import zipfile
+
+# Create project folder structure
+project_root = "/mnt/data/ToDoApp"
+java_dir = os.path.join(project_root, "app/java/com/example/todoapp")
+layout_dir = os.path.join(project_root, "app/res/layout")
+values_dir = os.path.join(project_root, "app/res/values")
+
+os.makedirs(java_dir, exist_ok=True)
+os.makedirs(layout_dir, exist_ok=True)
+os.makedirs(values_dir, exist_ok=True)
+
+# File contents
+files = {
+    os.path.join(java_dir, "Task.java"): """public class Task {
+    private String title;
+
+    public Task(String title) {
+        this.title = title;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+}
+""",
+    os.path.join(java_dir, "TaskAdapter.java"): """import android.app.AlertDialog;
+import android.content.Context;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.TextView;
+import androidx.recyclerview.widget.RecyclerView;
+import java.util.ArrayList;
+
+public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder> {
+    private Context context;
+    private ArrayList<Task> taskList;
+
+    public TaskAdapter(Context context, ArrayList<Task> taskList) {
+        this.context = context;
+        this.taskList = taskList;
+    }
+
+    public static class TaskViewHolder extends RecyclerView.ViewHolder {
+        TextView taskTitle;
+        ImageButton editBtn, deleteBtn;
+
+        public TaskViewHolder(View itemView) {
+            super(itemView);
+            taskTitle = itemView.findViewById(R.id.taskTitle);
+            editBtn = itemView.findViewById(R.id.btnEdit);
+            deleteBtn = itemView.findViewById(R.id.btnDelete);
+        }
+    }
+
+    @Override
+    public TaskViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+        View view = LayoutInflater.from(context).inflate(R.layout.task_item, parent, false);
+        return new TaskViewHolder(view);
+    }
+
+    @Override
+    public void onBindViewHolder(TaskViewHolder holder, int position) {
+        Task task = taskList.get(position);
+        holder.taskTitle.setText(task.getTitle());
+
+        holder.deleteBtn.setOnClickListener(v -> {
+            taskList.remove(position);
+            notifyItemRemoved(position);
+            notifyItemRangeChanged(position, taskList.size());
+        });
+
+        holder.editBtn.setOnClickListener(v -> {
+            EditText editTask = new EditText(context);
+            editTask.setText(task.getTitle());
+
+            new AlertDialog.Builder(context)
+                .setTitle("Edit Task")
+                .setView(editTask)
+                .setPositiveButton("Save", (dialog, which) -> {
+                    task.setTitle(editTask.getText().toString());
+                    notifyItemChanged(position);
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+        });
+    }
+
+    @Override
+    public int getItemCount() {
+        return taskList.size();
+    }
+}
+""",
+    os.path.join(java_dir, "MainActivity.java"): """import android.os.Bundle;
+import android.view.View;
+import android.widget.EditText;
+import android.widget.ImageButton;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import java.util.ArrayList;
+
+public class MainActivity extends AppCompatActivity {
+    private EditText inputTask;
+    private ImageButton addButton;
+    private RecyclerView recyclerView;
+    private TaskAdapter adapter;
+    private ArrayList<Task> taskList;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        inputTask = findViewById(R.id.inputTask);
+        addButton = findViewById(R.id.addButton);
+        recyclerView = findViewById(R.id.recyclerView);
+
+        taskList = new ArrayList<>();
+        adapter = new TaskAdapter(this, taskList);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        recyclerView.setAdapter(adapter);
+
+        addButton.setOnClickListener(view -> {
+            String taskText = inputTask.getText().toString().trim();
+            if (!taskText.isEmpty()) {
+                taskList.add(new Task(taskText));
+                adapter.notifyItemInserted(taskList.size() - 1);
+                inputTask.setText("");
+            }
+        });
+    }
+}
+""",
+    os.path.join(layout_dir, "activity_main.xml"): """<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <EditText
+            android:id="@+id/inputTask"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:hint="Enter task"
+            android:layout_height="wrap_content" />
+
+        <ImageButton
+            android:id="@+id/addButton"
+            android:src="@android:drawable/ic_input_add"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+    </LinearLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+</LinearLayout>
+""",
+    os.path.join(layout_dir, "task_item.xml"): """<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_marginTop="8dp"
+    android:orientation="horizontal"
+    android:padding="12dp"
+    android:background="#EEEEEE"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <TextView
+        android:id="@+id/taskTitle"
+        android:textSize="18sp"
+        android:layout_weight="1"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content" />
+
+    <ImageButton
+        android:id="@+id/btnEdit"
+        android:src="@android:drawable/ic_menu_edit"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+
+    <ImageButton
+        android:id="@+id/btnDelete"
+        android:src="@android:drawable/ic_menu_delete"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+</LinearLayout>
+""",
+    os.path.join(values_dir, "strings.xml"): """<resources>
+    <string name="app_name">ToDoApp</string>
+</resources>
+"""
+}
+
+# Write files to disk
+for path, content in files.items():
+    with open(path, "w") as f:
+        f.write(content)
+
+# Zip the entire project
+zip_path = "/mnt/data/ToDoApp.zip"
+with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+    for foldername, _, filenames in os.walk(project_root):
+        for filename in filenames:
+            file_path = os.path.join(foldername, filename)
+            zipf.write(file_path, arcname=os.path.relpath(file_path, project_root))
+
+zip_path
